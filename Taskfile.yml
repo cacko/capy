@@ -1,0 +1,16 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  run:
+    desc: run shit
+    cmds:
+      - poetry run python main.py
+    silent: true
+
+  install:
+    desc: install shit
+    cmds:
+      - poetry install
+
