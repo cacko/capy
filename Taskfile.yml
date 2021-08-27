@@ -12,5 +12,7 @@ tasks:
   install:
     desc: install shit
     cmds:
+      - pip install pipx
+      - pipx install poetry
       - poetry install
 
