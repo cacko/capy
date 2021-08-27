@@ -6,20 +6,38 @@ from PyQt6.QtCore import QPoint, QSize, pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
 from av import Player
 from .video import Video
-
+import time
 
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
+
+    fps = []
 
     def __init__(self):
         super().__init__()
         self._run_flag = True
 
     def run(self):
-        player = Player()
+        player = Player(callback=self.emit, fps=30)
+        self.fps = [time.time()]
         while self._run_flag:
-            frame, _ = next(player)
-            self.change_pixmap_signal.emit(frame)
+            _, _ = next(player)
+            # cv2.waitKey(int((1 / 30) * 1000))
+
+    def emit(self, frame):
+        # c = time.time()
+        # if c - self.fps[0] > 1:
+        #     print(len(self.fps))
+        #     self.fps = []
+        # self.fps.append(c)
+        # print(c - self.fps)
+        # self.fps = c
+        # if not len(self.fps) or c - self.fps[-1] > 1:
+        #     print(self.fps)
+        #     self.fps = []
+        # return 
+        # pass
+        self.change_pixmap_signal.emit(frame)
 
     def stop(self):
         """Sets run flag to False and waits for thread to finish"""
