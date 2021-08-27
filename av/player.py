@@ -5,6 +5,7 @@ import numpy as np
 from dataclasses import dataclass, asdict
 from stringcase import camelcase
 
+
 class Player:
 
     CHUNK = int(44100 / 30)
@@ -21,13 +22,11 @@ class Player:
     ir = None
     shape = None
 
-    __is_fullscreen = 0
-    __is_topmost = 1
     __pause = False
 
     def __init__(self, *args, **kwargs):
         cv2.setNumThreads(24)
-        self.video = cv2.VideoCapture(0)
+        self.video = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
         self.instream = self.audio.open(
             format=self.FORMAT,
             input_device_index=4,

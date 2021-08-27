@@ -2,7 +2,7 @@ from PyQt6 import QtCore
 from PyQt6.QtWidgets import QDialog, QVBoxLayout
 from PyQt6.QtGui import QKeySequence, QMouseEvent, QPixmap, QImage, QShortcut
 import cv2
-from PyQt6.QtCore import QPoint, pyqtSignal, pyqtSlot, Qt, QThread
+from PyQt6.QtCore import QPoint, QSize, pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
 from av import Player
 from .video import Video
@@ -35,6 +35,7 @@ class App(QDialog):
     __on_fullscreen = 0
     disply_width = 960
     display_height = 540
+    __last_size = QSize()
 
     def __init__(self):
         super().__init__()
@@ -86,9 +87,11 @@ class App(QDialog):
     def on_fullscreen(self):
         self.__on_fullscreen = 1 ^ self.__on_fullscreen
         if self.__on_fullscreen:
+            self.__last_size = self.size()
             self.showFullScreen()
         else:
             self.showNormal()
+            self.resize(self.__last_size)
 
     def on_escape(self):
         if self.__on_fullscreen:
