@@ -16,8 +16,6 @@ class VideoThread(QThread):
         self._run_flag = True
 
     def run(self):
-        # capture from web cam
-        cap = cv2.VideoCapture(0)
         player = Player()
         while self._run_flag:
             frame, _ = next(player)

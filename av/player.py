@@ -4,28 +4,27 @@ import cv2
 import numpy as np
 from dataclasses import dataclass, asdict
 from stringcase import camelcase
+import time
 
 
 class Player:
 
-    CHUNK = int(44100 / 30)
+    CHUNK = int(44100 / 15)
     CHANNELS = 1
     RATE = 44100
     FORMAT = pyaudio.paInt16
-    WINDOW_NAME = "CAPY"
 
     video: cv2.VideoCapture = None
     audio: pyaudio.PyAudio = pyaudio.PyAudio()
     instream: pyaudio.Stream = None
     outstream: pyaudio.Stream = None
 
-    ir = None
-    shape = None
+    __fps = 30
+    __prev = 0
 
-    __pause = False
-
-    def __init__(self, *args, **kwargs):
-        cv2.setNumThreads(24)
+    def __init__(self, fps=30, *args, **kwargs):
+        self.__fps = fps
+        self.CHUNK = int(self.RATE / (self.__fps / 2))
         self.video = cv2.VideoCapture(0, cv2.CAP_AVFOUNDATION)
         self.instream = self.audio.open(
             format=self.FORMAT,
@@ -44,7 +43,18 @@ class Player:
             output_device_index=1,
         )
 
+    @property
+    def waitfor(self) -> int:
+        if not self.__prev:
+            return None
+        elapsed = time.time() - self.__prev
+        res = 1 / self.__fps - elapsed
+        if res > 0:
+            return int(res * 1000)
+        return None
+
     def _videoDisplay(self, frame):
+        self.__prev = time.time()
         return frame
 
     def _audioPlay(self, aud):
@@ -59,8 +69,8 @@ class Player:
 
     def __next__(self):
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            if self.__pause:
-                return
+            if wf := self.waitfor:
+                cv2.waitKey(wf)
             tv = executor.submit(self.video.read)
             ta = executor.submit(
                 self.instream.read, self.CHUNK, exception_on_overflow=False
