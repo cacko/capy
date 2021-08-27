@@ -5,35 +5,6 @@ import numpy as np
 from dataclasses import dataclass, asdict
 from stringcase import camelcase
 
-
-@dataclass
-class FullscreenToggles:
-    set_window_property: tuple[tuple] = (
-        (cv2.WND_PROP_TOPMOST, 1),
-        (cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN),
-    )
-
-
-@dataclass
-class RatioToggles:
-    set_window_property: tuple[tuple] = (
-        (cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_KEEPRATIO),
-        (cv2.WND_PROP_ASPECT_RATIO, cv2.WINDOW_FREERATIO),
-    )
-
-
-@dataclass
-class TopMostToggles:
-    named_window: tuple[tuple] = (
-        (cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO,),
-        (cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO,),
-    )
-    set_window_property: tuple[tuple] = (
-        (cv2.WND_PROP_TOPMOST, 0),
-        (cv2.WND_PROP_TOPMOST, 1),
-    )
-
-
 class Player:
 
     CHUNK = int(44100 / 30)
@@ -55,6 +26,7 @@ class Player:
     __pause = False
 
     def __init__(self, *args, **kwargs):
+        cv2.setNumThreads(24)
         self.video = cv2.VideoCapture(0)
         self.instream = self.audio.open(
             format=self.FORMAT,
@@ -82,18 +54,6 @@ class Player:
     def _toggle(self, toggles: dataclass, mode: int):
         for (fn, args) in asdict(toggles).items():
             getattr(cv2, camelcase(fn))(self.WINDOW_NAME, *args[mode])
-
-    def toggleFullScreen(self):
-        self.__is_fullscreen = 1 ^ self.__is_fullscreen
-        self._toggle(RatioToggles(), self.__is_fullscreen)
-        self._toggle(FullscreenToggles(), self.__is_fullscreen)
-
-    def toggleTopmost(self):
-        if self.__is_fullscreen:
-            return
-        self.__is_topmost = 1 ^ self.__is_topmost
-        cv2.destroyAllWindows()
-        self._toggle(TopMostToggles(), self.__is_topmost)
 
     def __iter__(self):
         return self
