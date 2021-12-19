@@ -1,6 +1,6 @@
 from PyQt6 import QtCore
-from PyQt6.QtWidgets import QDialog, QVBoxLayout
-from PyQt6.QtGui import QKeySequence, QMouseEvent, QPixmap, QImage, QShortcut
+from PyQt6.QtWidgets import QDialog, QSizePolicy, QVBoxLayout
+from PyQt6.QtGui import QKeySequence, QMouseEvent, QPixmap, QImage, QResizeEvent, QShortcut
 import cv2
 from PyQt6.QtCore import QPoint, QSize, pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
@@ -8,17 +8,31 @@ from av import Player
 from .video import Video
 import time
 
+
 class VideoThread(QThread):
     change_pixmap_signal = pyqtSignal(np.ndarray)
 
     fps = []
 
-    def __init__(self):
+    videoInput: int = 0
+    audioInput: int = 0
+    audioOutput: int = 0
+
+    def __init__(self, videoInput: int, audioInput: int, audioOutput: int):
         super().__init__()
+        self.videoInput = videoInput
+        self.audioInput = audioInput
+        self.audioOutput = audioOutput
         self._run_flag = True
 
     def run(self):
-        player = Player(callback=self.emit, fps=30)
+        player = Player(
+            callback=self.emit,
+            videoInputIdx=self.videoInput,
+            audioInputIdx=self.audioInput,
+            audioOutputIdx=self.audioOutput,
+            fps=30,
+        )
         self.fps = [time.time()]
         while self._run_flag:
             _, _ = next(player)
@@ -35,7 +49,7 @@ class VideoThread(QThread):
         # if not len(self.fps) or c - self.fps[-1] > 1:
         #     print(self.fps)
         #     self.fps = []
-        # return 
+        # return
         # pass
         self.change_pixmap_signal.emit(frame)
 
@@ -53,7 +67,14 @@ class App(QDialog):
     display_height = 540
     __last_size = QSize()
 
-    def __init__(self):
+    audioInput:int = None
+    audioOutput: int = None
+    videoInput: int = None
+
+    def __init__(self, videoInput: int, audioInput: int, audioOutput: int):
+        self.videoInput = videoInput
+        self.audioInput = audioInput
+        self.audioOutput = audioOutput
         super().__init__()
 
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.FramelessWindowHint)
@@ -74,7 +95,7 @@ class App(QDialog):
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.addWidget(self.image_label)
         self.setLayout(vbox)
-        self.thread = VideoThread()
+        self.thread = VideoThread(videoInput=self.videoInput, audioInput=self.audioInput, audioOutput=self.audioOutput)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.start()
         self.on_top()
@@ -99,6 +120,13 @@ class App(QDialog):
                 self.windowFlags() & ~QtCore.Qt.WindowType.WindowStaysOnTopHint
             )
         self.show()
+
+    def resizeEvent(self, a0: QResizeEvent) -> None:
+        size = a0.size()
+        self.setFixedHeight(int(size.width() * (1080 / 1920)))
+        self.disply_width = size.width()
+        self.display_height = size.height()
+        return super().resizeEvent(a0)
 
     def on_fullscreen(self):
         self.__on_fullscreen = 1 ^ self.__on_fullscreen

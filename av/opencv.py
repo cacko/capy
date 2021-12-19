@@ -1,49 +1,46 @@
 import concurrent.futures
-import pyaudio
+import sounddevice as sd
 import cv2
-import numpy as np
 from dataclasses import dataclass, asdict
 from stringcase import camelcase
 import time
-
 
 class Player:
 
     CHUNK = int(44100 / 15)
     CHANNELS = 1
     RATE = 44100
-    FORMAT = pyaudio.paInt16
+    FORMAT = "int16"
 
     video: cv2.VideoCapture = None
-    audio: pyaudio.PyAudio = pyaudio.PyAudio()
-    instream: pyaudio.Stream = None
-    outstream: pyaudio.Stream = None
+    instream: sd.InputStream = None
+    outstream: sd.OutputStream = None
 
     __fps = 30
     __prev = 0
     __callback = None
 
-    def __init__(self, callback, fps=30, *args, **kwargs):
+    def __init__(self, callback, videoInputIdx:int, audioInputIdx:int, audioOutputIdx: int, fps=30, *args, **kwargs):
         self.__fps = fps
         self.__callback = callback
         self.CHUNK = int(self.RATE / (self.__fps / 2))
-        self.video = cv2.VideoCapture(0)
-        self.instream = self.audio.open(
-            format=self.FORMAT,
-            input_device_index=4,
+        self.video = cv2.VideoCapture(videoInputIdx)
+        self.instream = sd.InputStream(
+            device=audioInputIdx,
             channels=self.CHANNELS,
-            rate=self.RATE,
-            input=True,
-            frames_per_buffer=self.CHUNK,
+            samplerate=self.RATE,
+            blocksize=self.CHUNK,
+            dtype=self.FORMAT,
         )
-        self.outstream = self.audio.open(
-            format=self.FORMAT,
+        self.outstream = sd.OutputStream(
             channels=self.CHANNELS,
-            rate=self.RATE,
-            output=True,
-            frames_per_buffer=self.CHUNK,
-            output_device_index=1,
+            dtype=self.FORMAT,
+            samplerate=self.RATE,
+            blocksize=self.CHUNK,
+            device=audioOutputIdx,
         )
+        self.instream.start()
+        self.outstream.start()
 
     @property
     def waitfor(self) -> int:
@@ -61,8 +58,8 @@ class Player:
         return self.__callback(frame)
 
     def _audioPlay(self, ta):
-        aud = ta.result()
-        self.outstream.write(np.frombuffer(aud, dtype="int16"), self.CHUNK)
+        aud, _ = ta.result()
+        self.outstream.write(aud)
 
     def _toggle(self, toggles: dataclass, mode: int):
         for (fn, args) in asdict(toggles).items():
@@ -74,9 +71,7 @@ class Player:
     def __next__(self):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             tv = executor.submit(self.video.read)
-            ta = executor.submit(
-                self.instream.read, self.CHUNK, exception_on_overflow=False
-            )
+            ta = executor.submit(self.instream.read, self.CHUNK)
             return self._videoDisplay(tv), self._audioPlay(ta)
 
     def __del__(self):

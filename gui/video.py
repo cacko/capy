@@ -20,7 +20,7 @@ class Video(QLabel):
 
     def resizeEvent(self, a0: QResizeEvent) -> None:
         size = a0.size()
-        self.setFixedHeight(size.width() * (1080 / 1920))
+        self.setFixedHeight(int(size.width() * (1080 / 1920)))
         self.parent.disply_width = size.width()
         self.parent.disply_height = size.height()
         return super().resizeEvent(a0)

@@ -6,7 +6,7 @@ tasks:
   run:
     desc: run shit
     cmds:
-      - poetry run python main.py
+      - poetry run python main.py {{.CLI_ARGS}}
     silent: true
 
   install:
